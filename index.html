@@ -430,7 +430,7 @@ const imgInner = w =>
    <span class="emoji">${w.emoji}</span>`;
 
 /* =========================================================
-   SPEECH  —  robust version
+   SPEECH
    ========================================================= */
 const speechOK = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
 let voices = [];
@@ -506,7 +506,10 @@ function speak(text, opts) {
     } catch(e){}
   }, 80);
 }
-
+function stopSpeech() {
+  if (!speechOK) return;
+  try { window.speechSynthesis.cancel(); } catch(e){}
+}
 function sayHero(t)   { speak(t, { pitch: 1.45, rate: 0.82, voice: heroVoice }); }
 function sayPlayer(t) { speak(t, { pitch: 0.95, rate: 0.9,  voice: playerVoice }); }
 
@@ -518,14 +521,33 @@ function addScore(n = 1) {
 }
 
 /* =========================================================
-   TABS
+   TABS  —  lazy start of auto-speaking tabs
    ========================================================= */
+let activeTab = 'cards';
+let dialogueStarted = false;   // dialogue will start ONLY when user opens the Talk tab
+
 document.querySelectorAll('.tab').forEach(btn => {
   btn.addEventListener('click', () => {
+    const targetTab = btn.dataset.tab;
+    activeTab = targetTab;
+
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
     document.querySelectorAll('.screen').forEach(s =>
-      s.classList.toggle('active', s.id === 'screen-' + btn.dataset.tab)
+      s.classList.toggle('active', s.id === 'screen-' + targetTab)
     );
+
+    // stop any ongoing speech when leaving a tab
+    stopSpeech();
+
+    // Start the dialogue the first time the Talk tab is opened.
+    // This way the hero's question is heard only when the child is on that tab.
+    if (targetTab === 'ask' && !dialogueStarted) {
+      dialogueStarted = true;
+      // small delay so the tab visual switch is done first
+      setTimeout(() => {
+        if (activeTab === 'ask') newRound();
+      }, 300);
+    }
   });
 });
 
@@ -669,7 +691,7 @@ $('#matchRestart').addEventListener('click', startMatch);
 startMatch();
 
 /* =========================================================
-   TAB 3 — SPELL  (build the word from letters)
+   TAB 3 — SPELL
    ========================================================= */
 const spellImg      = $('#spellImg');
 const spellSlots    = $('#spellSlots');
@@ -706,7 +728,6 @@ function showSpell() {
   renderSpellSlots(w.text);
   renderSpellChips();
 
-  // auto-say the word when a new card appears
   setTimeout(() => {
     if (spellQueue[spellIdx] === w) sayPlayer(w.text);
   }, 250);
@@ -806,7 +827,6 @@ $('#spellSkip').addEventListener('click', () => {
   showSpell();
 });
 
-/* 🔊 Replay button for Spell tab */
 spellSpeakBtn.addEventListener('click', e => {
   e.stopPropagation();
   primeSpeech();
@@ -817,7 +837,7 @@ spellSpeakBtn.addEventListener('click', e => {
 startSpell();
 
 /* =========================================================
-   TAB 4 — WRITE THE WORD
+   TAB 4 — WRITE
    ========================================================= */
 const labelImg      = $('#labelImg');
 const labelInput    = $('#labelInput');
@@ -840,7 +860,6 @@ function showLabel() {
   labelFeedback.textContent = '';
   labelFeedback.className = 'feedback';
   labelTries = 0;
-  // auto-say once when the card appears
   setTimeout(() => {
     if (labelQueue[labelIdx] === w) sayPlayer(w.text);
   }, 250);
@@ -884,7 +903,6 @@ labelInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); checkLabel(); }
 });
 
-/* 🔊 Replay button for Write tab */
 labelSpeakBtn.addEventListener('click', e => {
   e.stopPropagation();
   primeSpeech();
@@ -896,6 +914,7 @@ startLabel();
 
 /* =========================================================
    TAB 5 — DIALOGUE
+   (Now started only when the Talk tab is opened — see TABS block)
    ========================================================= */
 const HERO_ACTS = ['wake up','get up','have a shower','get dressed','have breakfast'];
 const TIMES     = [6, 7, 8, 9];
@@ -945,6 +964,8 @@ function newRound() {
 
   const qText = heroSaysText.textContent;
   setTimeout(() => {
+    // speak only if the child is still on the Talk tab
+    if (activeTab !== 'ask') return;
     if (roundId === myRound) sayHero(qText);
   }, 350);
 }
@@ -999,7 +1020,7 @@ function onPhaseComplete() {
     sayPlayer(sentence);
 
     setTimeout(() => {
-      if (roundId === myRound) startQuestionPhase();
+      if (roundId === myRound && activeTab === 'ask') startQuestionPhase();
     }, 2400);
 
   } else {
@@ -1008,7 +1029,7 @@ function onPhaseComplete() {
     sayPlayer(question);
 
     setTimeout(() => {
-      if (roundId !== myRound) return;
+      if (roundId !== myRound || activeTab !== 'ask') return;
       const heroReply = `I ${questionAct} at ${heroTime} o'clock.`;
       heroSaysText.textContent = heroReply;
       sayHero(heroReply);
@@ -1051,7 +1072,8 @@ nextBtn.addEventListener('click', () => {
   newRound();
 });
 
-newRound();
+/* NOTE: newRound() is NOT called here anymore.
+   It is called from the TABS handler the first time the Talk tab is opened. */
 </script>
 </body>
 </html>
