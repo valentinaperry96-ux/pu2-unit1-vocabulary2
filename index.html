@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>My Morning — Word Games</title>
+<style>
+:root{
+  --pink:#ff8fb1; --blue:#5ec8f5; --yellow:#ffd93d;
+  --green:#7bd88f; --purple:#b28dff;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;}
+body{
+  font-family:'Comic Sans MS','Chalkboard SE','Trebuchet MS',system-ui,sans-serif;
+  color:#33335c;
+  background:linear-gradient(160deg,#bfe9ff 0%,#ffe9b8 55%,#ffd0e6 100%);
+  user-select:none;touch-action:manipulation;
+}
+
+/* ---------- LAYOUT ---------- */
+#app{
+  height:100vh;height:100dvh;
+  display:flex;flex-direction:column;
+  max-width:700px;margin:0 auto;
+  padding:6px;padding-bottom:max(6px,env(safe-area-inset-bottom));
+  gap:6px;
+}
+header{
+  display:flex;align-items:center;gap:8px;
+  padding:5px 10px;background:#fff;border-radius:16px;
+  box-shadow:0 3px 0 rgba(0,0,0,.08);flex:0 0 auto;
+}
+header h1{
+  font-size:clamp(14px,4.5vw,20px);margin:0;flex:1;text-align:center;
+  color:#ff6f9c;letter-spacing:.5px;
+}
+.logo{font-size:clamp(16px,5vw,22px);}
+.score{
+  font-size:clamp(11px,3.4vw,15px);background:#fff3c4;
+  border-radius:999px;padding:4px 10px;font-weight:700;white-space:nowrap;
+}
+
+main{flex:1;position:relative;min-height:0;}
+.screen{
+  position:absolute;inset:0;display:none;flex-direction:column;
+  gap:8px;min-height:0;
+}
+.screen.active{display:flex;}
+
+/* ---------- IMAGE BOX ---------- */
+.imgbox{display:flex;align-items:center;justify-content:center;min-height:0;min-width:0;}
+.imgbox img{max-width:100%;max-height:100%;object-fit:contain;display:block;}
+.imgbox .emoji{display:none;font-size:clamp(26px,9vw,46px);line-height:1;}
+.imgbox.noimg img{display:none;}
+.imgbox.noimg .emoji{display:block;}
+
+/* ---------- TAB 1: CARDS ---------- */
+.cards{
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,1fr);
+  gap:8px;flex:1;min-height:0;
+}
+.card{
+  background:#fff;border-radius:16px;box-shadow:0 4px 0 rgba(0,0,0,.10);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:4px;min-height:0;cursor:pointer;
+  transition:transform .12s ease, background .2s;
+}
+.card:active{transform:scale(.95);}
+.card.flash{background:#fffbe0;}
+.card .imgbox{flex:1;width:100%;}
+.card .word{
+  font-size:clamp(10px,3.1vw,14px);font-weight:700;text-align:center;
+  line-height:1.05;margin-top:3px;color:#4a4a80;
+}
+
+/* ---------- TAB 2: MATCH ---------- */
+.hintbar{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:clamp(11px,3.4vw,14px);font-weight:700;color:#5c5c8a;
+  padding:0 6px;flex:0 0 auto;
+}
+.mini{
+  font-family:inherit;font-size:16px;line-height:1;border:none;
+  background:#fff;border-radius:12px;padding:6px 10px;cursor:pointer;
+  box-shadow:0 3px 0 rgba(0,0,0,.1);color:#5c5c8a;
+}
+.mini:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.1);}
+.match{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;min-height:0;}
+.col{display:grid;grid-template-rows:repeat(4,1fr);gap:8px;min-height:0;}
+.tile{
+  background:#fff;border-radius:14px;box-shadow:0 4px 0 rgba(0,0,0,.10);
+  display:flex;align-items:center;justify-content:center;
+  padding:3px;min-height:0;cursor:pointer;border:3px solid transparent;
+  transition:transform .12s, background .2s, border-color .2s;
+}
+.tile .imgbox{width:100%;height:100%;}
+.tile.word{
+  font-size:clamp(10px,3.1vw,14px);font-weight:700;text-align:center;
+  line-height:1.1;padding:4px;color:#4a4a80;
+}
+.tile.sel{border-color:var(--blue);background:#e8f7ff;transform:scale(1.03);}
+.tile.done{background:#d8f8e0;border-color:var(--green);opacity:.8;pointer-events:none;}
+.tile.wrong{border-color:var(--pink);background:#ffe8ef;animation:shake .4s;}
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  25%{transform:translateX(-5px);}
+  75%{transform:translateX(5px);}
+}
+
+/* ---------- TAB 3: SPELL ---------- */
+.spellwrap{flex:1;display:flex;flex-direction:column;gap:8px;min-height:0;}
+.spellTop{
+  flex:1;min-height:0;position:relative;display:flex;
+}
+#spellImg{
+  flex:1;min-height:0;width:100%;background:#fff;border-radius:20px;
+  padding:6px;box-shadow:0 4px 0 rgba(0,0,0,.08);
+}
+#spellImg .emoji{font-size:clamp(36px,14vw,70px);}
+.spellSpeakBtn{
+  position:absolute;top:8px;right:8px;
+  width:clamp(38px,11vw,50px);height:clamp(38px,11vw,50px);
+  border:none;border-radius:50%;cursor:pointer;
+  background:linear-gradient(180deg,#ffd93d,#ffb830);
+  font-size:clamp(18px,5.5vw,24px);line-height:1;
+  box-shadow:0 3px 0 rgba(0,0,0,.18);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .1s;
+  padding:0;
+}
+.spellSpeakBtn:active{transform:translateY(2px) scale(.95);box-shadow:0 1px 0 rgba(0,0,0,.18);}
+.slots{
+  display:flex;flex-wrap:wrap;gap:8px 12px;justify-content:center;
+  padding:8px 6px;background:#fff;border-radius:14px;
+  box-shadow:0 3px 0 rgba(0,0,0,.08);flex:0 0 auto;min-height:48px;
+  align-items:center;transition:background .25s;
+}
+.slots.wrong{background:#ffe8ef;animation:shake .4s;}
+.slots.ok{background:#e8f8ec;}
+.slotWord{display:flex;gap:4px;}
+.slot{
+  width:clamp(18px,5vw,28px);height:clamp(24px,6.5vw,36px);
+  border-radius:8px;background:#f0f5ff;border:2px dashed #b8c8e8;
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(13px,3.8vw,19px);font-weight:800;
+  color:#3b5bbf;text-transform:lowercase;transition:all .15s;
+}
+.slot.filled{
+  background:#e8f8ec;border-style:solid;border-color:#7bd88f;color:#2f7d4a;
+}
+.slots.ok .slot.filled{background:#c8f0d4;border-color:#4cbf68;}
+#spellLetters{
+  display:flex;flex-wrap:wrap;gap:5px;justify-content:center;
+  flex:0 0 auto;min-height:36px;
+}
+.letterChip{
+  font-family:inherit;font-weight:800;
+  font-size:clamp(12px,3.8vw,17px);text-transform:lowercase;
+  width:clamp(30px,8vw,42px);height:clamp(34px,9vw,44px);
+  border-radius:12px;border:none;background:#fff;
+  box-shadow:0 3px 0 rgba(0,0,0,.12);cursor:pointer;color:#3b5bbf;
+  transition:transform .1s, opacity .2s, background .2s;
+  display:flex;align-items:center;justify-content:center;
+}
+.letterChip:active{transform:scale(.9);}
+.letterChip.used{opacity:.2;pointer-events:none;}
+
+/* ---------- TAB 4: WRITE ---------- */
+.labelwrap{flex:1;display:flex;flex-direction:column;gap:10px;min-height:0;}
+.labelTop{flex:1;min-height:0;position:relative;display:flex;}
+#labelImg{
+  flex:1;min-height:0;width:100%;background:#fff;border-radius:20px;
+  padding:8px;box-shadow:0 4px 0 rgba(0,0,0,.08);
+}
+#labelImg .emoji{font-size:clamp(40px,16vw,80px);}
+.labelSpeakBtn{
+  position:absolute;top:8px;right:8px;
+  width:clamp(38px,11vw,50px);height:clamp(38px,11vw,50px);
+  border:none;border-radius:50%;cursor:pointer;
+  background:linear-gradient(180deg,#ffd93d,#ffb830);
+  font-size:clamp(18px,5.5vw,24px);line-height:1;
+  box-shadow:0 3px 0 rgba(0,0,0,.18);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .1s;
+  padding:0;
+}
+.labelSpeakBtn:active{transform:translateY(2px) scale(.95);box-shadow:0 1px 0 rgba(0,0,0,.18);}
+.row{display:flex;gap:8px;width:100%;flex:0 0 auto;}
+input{
+  flex:1;width:100%;font-family:inherit;font-size:clamp(14px,4.5vw,18px);
+  padding:11px 14px;border-radius:14px;border:3px solid #cfe6ff;
+  outline:none;text-align:center;background:#fff;color:#33335c;min-width:0;
+}
+input:focus{border-color:var(--blue);}
+.btn{
+  flex:1;font-family:inherit;font-weight:700;font-size:clamp(13px,4vw,16px);
+  padding:11px 8px;border:none;border-radius:14px;cursor:pointer;
+  background:linear-gradient(180deg,#7bd88f,#4cbf68);color:#fff;
+  box-shadow:0 4px 0 rgba(0,0,0,.15);transition:transform .1s;
+}
+.btn.ghost{background:linear-gradient(180deg,#b9c9ff,#8ea6ff);}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.15);}
+.btn:disabled{opacity:.45;pointer-events:none;}
+.feedback{
+  min-height:24px;font-weight:700;text-align:center;
+  font-size:clamp(12px,4vw,16px);flex:0 0 auto;
+}
+.feedback.ok{color:#2fa14a;}
+.feedback.no{color:#e0507a;}
+
+/* ---------- TAB 5: DIALOGUE ---------- */
+.ask{flex:1;display:flex;flex-direction:column;gap:6px;min-height:0;}
+.heroRow{
+  display:flex;gap:8px;align-items:stretch;
+  height:clamp(68px,20vw,110px);flex:0 0 auto;
+}
+.hero{
+  width:clamp(68px,20vw,110px);background:#fff;border-radius:18px;padding:4px;
+  box-shadow:0 4px 0 rgba(0,0,0,.08);flex:0 0 auto;
+}
+.hero .emoji{font-size:clamp(34px,12vw,60px);}
+.bubble{
+  flex:1;min-width:0;background:#fff;border-radius:18px;padding:8px 10px;
+  box-shadow:0 4px 0 rgba(0,0,0,.08);display:flex;align-items:center;
+  justify-content:center;gap:6px;cursor:pointer;text-align:center;
+  font-size:clamp(12px,3.8vw,17px);font-weight:700;line-height:1.2;
+  transition:background .25s;
+}
+.bubble.hero-say span#heroSaysText{color:#2f7d4a;}
+.bubble.player-say span#playerText{color:#3b5bbf;}
+.bubble.player-say.solved{background:#e8f8ec;}
+.bubble.player-say.solved span#playerText{color:#2f7d4a;}
+.spk{font-size:clamp(14px,4.5vw,20px);flex:0 0 auto;}
+.turnBar{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:0 6px;font-size:clamp(10px,3.2vw,13px);font-weight:800;
+  color:#7a7aa8;flex:0 0 auto;
+}
+.hint{
+  background:#fff3c4;border-radius:999px;padding:3px 10px;
+  color:#8a6a00;font-weight:800;white-space:nowrap;
+}
+.hint.hidden{visibility:hidden;}
+.chips{
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
+  flex:0 0 auto;min-height:38px;
+}
+.chip{
+  font-family:inherit;font-weight:700;font-size:clamp(10px,3.2vw,14px);
+  padding:7px 11px;border-radius:999px;border:3px solid #fff;background:#fff;
+  box-shadow:0 3px 0 rgba(0,0,0,.10);cursor:pointer;color:#5c5c8a;
+  transition:transform .1s, background .2s;
+}
+.chip:active{transform:scale(.95);}
+.chip.shake{animation:shake .4s;border-color:var(--pink);background:#ffe8ef;}
+
+/* ---------- TABS ---------- */
+nav{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:5px;flex:0 0 auto;
+}
+.tab{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:5px 1px;border:none;border-radius:14px;background:#fff;
+  color:#7a7aa8;font-family:inherit;font-weight:700;
+  font-size:clamp(8px,2.5vw,11px);box-shadow:0 3px 0 rgba(0,0,0,.10);
+  cursor:pointer;transition:transform .12s, background .2s;
+}
+.tab span{font-size:clamp(15px,5vw,20px);line-height:1;}
+.tab.active{
+  background:linear-gradient(180deg,#ffd93d,#ffb830);color:#5a3d00;
+  transform:translateY(-2px);
+}
+.tab:active{transform:translateY(1px);}
+
+/* ---------- SPEECH NOTICE ---------- */
+#speechNotice{
+  position:fixed;left:50%;bottom:86px;transform:translateX(-50%);
+  background:rgba(0,0,0,.78);color:#fff;padding:8px 14px;border-radius:999px;
+  font-size:13px;font-weight:700;z-index:50;display:none;
+  pointer-events:none;white-space:nowrap;
+}
+#speechNotice.show{display:block;}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <span class="logo">🌞</span>
+    <h1>My Morning</h1>
+    <span class="score" id="score">⭐ 0</span>
+  </header>
+
+  <main>
+    <!-- ===== TAB 1: CARDS ===== -->
+    <section class="screen active" id="screen-cards">
+      <div class="cards" id="cardsGrid"></div>
+    </section>
+
+    <!-- ===== TAB 2: MATCH ===== -->
+    <section class="screen" id="screen-match">
+      <div class="hintbar">
+        <span id="matchInfo">Round 1 / 2</span>
+        <button class="mini" id="matchRestart" title="Restart">↻</button>
+      </div>
+      <div class="match" id="matchGrid"></div>
+    </section>
+
+    <!-- ===== TAB 3: SPELL ===== -->
+    <section class="screen" id="screen-spell">
+      <div class="spellwrap">
+        <div class="spellTop">
+          <div class="imgbox" id="spellImg"></div>
+          <button class="spellSpeakBtn" id="spellSpeak" title="Hear the word">🔊</button>
+        </div>
+        <div class="slots" id="spellSlots"></div>
+        <div id="spellLetters"></div>
+        <div class="row">
+          <button class="btn ghost" id="spellBack">⌫</button>
+          <button class="btn ghost" id="spellSkip">Next ➜</button>
+        </div>
+        <div class="feedback" id="spellFeedback"></div>
+      </div>
+    </section>
+
+    <!-- ===== TAB 4: WRITE ===== -->
+    <section class="screen" id="screen-label">
+      <div class="labelwrap">
+        <div class="labelTop">
+          <div class="imgbox" id="labelImg"></div>
+          <button class="labelSpeakBtn" id="labelSpeak" title="Hear the word">🔊</button>
+        </div>
+        <div class="row">
+          <input id="labelInput" type="text" placeholder="Write the word..."
+                 autocomplete="off" autocorrect="off" autocapitalize="none"
+                 spellcheck="false" enterkeyhint="done">
+        </div>
+        <div class="row">
+          <button class="btn" id="labelCheck">Check ✓</button>
+          <button class="btn ghost" id="labelSkip">Next ➜</button>
+        </div>
+        <div class="feedback" id="labelFeedback"></div>
+      </div>
+    </section>
+
+    <!-- ===== TAB 5: DIALOGUE ===== -->
+    <section class="screen" id="screen-ask">
+      <div class="ask">
+        <div class="heroRow">
+          <div class="hero imgbox" id="heroBox">
+            <img src="images/hero.png" alt="hero"
+                 onerror="this.parentNode.classList.add('noimg')">
+            <span class="emoji">🧒</span>
+          </div>
+          <div class="bubble hero-say" id="heroSayBubble">
+            <span id="heroSaysText">…</span>
+            <span class="spk" id="speakHero" title="Hear hero">🔊</span>
+          </div>
+        </div>
+
+        <div class="turnBar">
+          <span id="phaseLabel">Your answer</span>
+          <span class="hint" id="timeHint">⏰ 7:00</span>
+        </div>
+
+        <div class="bubble player-say" id="playerBubble">
+          <span id="playerText">…</span>
+          <span class="spk" id="speakPlayer" title="Hear your line">🔊</span>
+        </div>
+
+        <div class="chips" id="wordPool"></div>
+
+        <div class="row">
+          <button class="btn" id="nextRoundBtn" disabled>Next dialogue 🔄</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav id="tabs">
+    <button class="tab active" data-tab="cards"><span>🃏</span>Cards</button>
+    <button class="tab" data-tab="match"><span>🧩</span>Match</button>
+    <button class="tab" data-tab="spell"><span>🔤</span>Spell</button>
+    <button class="tab" data-tab="label"><span>✏️</span>Write</button>
+    <button class="tab" data-tab="ask"><span>💬</span>Talk</button>
+  </nav>
+</div>
+
+<div id="speechNotice">🔇 Tap the screen to enable sound</div>
+
+<script>
+/* =========================================================
+   IMAGES  →  put your pictures in the "images" folder:
+   images/wake_up.png
+   images/get_up.png
+   images/have_a_shower.png
+   images/towel.png
+   images/get_dressed.png
+   images/toothpaste.png
+   images/toothbrush.png
+   images/have_breakfast.png
+   images/hero.png
+   ========================================================= */
+
+const WORDS = [
+  { id:'wake',      text:'wake up',        img:'images/wake_up.png',        emoji:'⏰' },
+  { id:'getup',     text:'get up',         img:'images/get_up.png',         emoji:'🛏️' },
+  { id:'shower',    text:'have a shower',  img:'images/have_a_shower.png',  emoji:'🚿' },
+  { id:'towel',     text:'towel',          img:'images/towel.png',          emoji:'🧻' },
+  { id:'dressed',   text:'get dressed',    img:'images/get_dressed.png',    emoji:'👕' },
+  { id:'paste',     text:'toothpaste',     img:'images/toothpaste.png',     emoji:'🧴' },
+  { id:'brush',     text:'toothbrush',     img:'images/toothbrush.png',     emoji:'🪥' },
+  { id:'breakfast', text:'have breakfast', img:'images/have_breakfast.png', emoji:'🍳' }
+];
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const shuffle = a => {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+const imgInner = w =>
+  `<img src="${w.img}" alt="${w.text}" onerror="this.parentNode.classList.add('noimg')">
+   <span class="emoji">${w.emoji}</span>`;
+
+/* =========================================================
+   SPEECH  —  robust version
+   ========================================================= */
+const speechOK = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
+let voices = [];
+let heroVoice = null;
+let playerVoice = null;
+
+function loadVoices() {
+  if (!speechOK) return;
+  voices = window.speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+  if (!voices.length) return;
+
+  const femaleHints = /female|woman|girl|samantha|karen|victoria|moira|tessa|fiona|zira|aria|jenny|emma|libby|sonia|nicky|amelie|google uk english female/i;
+  const maleHints   = /male|man|daniel|alex|fred|david|mark|george|oliver|thomas|ryan|guy|google uk english male/i;
+
+  heroVoice   = voices.find(v => /en-GB/i.test(v.lang) && femaleHints.test(v.name))
+             || voices.find(v => /en-GB/i.test(v.lang))
+             || voices.find(v => femaleHints.test(v.name))
+             || voices.find(v => /^en/i.test(v.lang))
+             || voices[0];
+
+  playerVoice = voices.find(v => /en-GB/i.test(v.lang) && maleHints.test(v.name))
+             || voices.find(v => /en-GB/i.test(v.lang))
+             || voices.find(v => maleHints.test(v.name))
+             || voices[0];
+}
+
+if (speechOK) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+let speechPrimed = false;
+function primeSpeech() {
+  if (!speechOK || speechPrimed) return;
+  speechPrimed = true;
+  try {
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    u.rate = 2;
+    window.speechSynthesis.speak(u);
+  } catch(e){}
+  loadVoices();
+  $('#speechNotice').classList.remove('show');
+}
+document.addEventListener('touchstart', primeSpeech, { once:true, passive:true });
+document.addEventListener('click',      primeSpeech, { once:true });
+
+if (speechOK) {
+  setTimeout(() => {
+    if (!speechPrimed) $('#speechNotice').classList.add('show');
+  }, 500);
+  setTimeout(() => $('#speechNotice').classList.remove('show'), 5000);
+} else {
+  $('#speechNotice').textContent = '🔇 Speech not supported in this browser';
+  $('#speechNotice').classList.add('show');
+}
+
+let speakToken = 0;
+function speak(text, opts) {
+  if (!speechOK || !text) return;
+  const myToken = ++speakToken;
+  try { window.speechSynthesis.cancel(); } catch(e){}
+  setTimeout(() => {
+    if (myToken !== speakToken) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang  = (opts && opts.lang)  || 'en-GB';
+      u.rate  = (opts && opts.rate)  || 0.88;
+      u.pitch = (opts && opts.pitch) || 1.0;
+      u.volume = 1;
+      if (opts && opts.voice) u.voice = opts.voice;
+      window.speechSynthesis.speak(u);
+    } catch(e){}
+  }, 80);
+}
+
+function sayHero(t)   { speak(t, { pitch: 1.45, rate: 0.82, voice: heroVoice }); }
+function sayPlayer(t) { speak(t, { pitch: 0.95, rate: 0.9,  voice: playerVoice }); }
+
+/* ---------- score ---------- */
+let score = 0;
+function addScore(n = 1) {
+  score += n;
+  $('#score').textContent = '⭐ ' + score;
+}
+
+/* =========================================================
+   TABS
+   ========================================================= */
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.screen').forEach(s =>
+      s.classList.toggle('active', s.id === 'screen-' + btn.dataset.tab)
+    );
+  });
+});
+
+/* =========================================================
+   TAB 1 — FLASHCARDS
+   ========================================================= */
+const cardsGrid = $('#cardsGrid');
+WORDS.forEach(w => {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `<div class="imgbox">${imgInner(w)}</div>
+                    <div class="word">${w.text}</div>`;
+  card.addEventListener('click', () => {
+    primeSpeech();
+    sayPlayer(w.text);
+    card.classList.add('flash');
+    setTimeout(() => card.classList.remove('flash'), 250);
+  });
+  cardsGrid.appendChild(card);
+});
+
+/* =========================================================
+   TAB 2 — MATCHING GAME
+   ========================================================= */
+const matchGrid  = $('#matchGrid');
+const matchInfo  = $('#matchInfo');
+
+let matchRounds = [], matchRoundIdx = 0, matchSolved = 0;
+let selImgTile = null, selWordTile = null, matchLock = false;
+
+function startMatch() {
+  const sh = shuffle(WORDS.slice());
+  matchRounds = [sh.slice(0, 4), sh.slice(4, 8)];
+  matchRoundIdx = 0;
+  matchSolved = 0;
+  renderMatchRound();
+}
+
+function renderMatchRound() {
+  matchGrid.innerHTML = '';
+  selImgTile = null;
+  selWordTile = null;
+  matchLock = false;
+
+  const pairs = matchRounds[matchRoundIdx];
+  const left  = shuffle(pairs.slice());
+  const right = shuffle(pairs.slice());
+
+  const colL = document.createElement('div'); colL.className = 'col';
+  const colR = document.createElement('div'); colR.className = 'col';
+
+  left.forEach(w => {
+    const t = document.createElement('div');
+    t.className = 'tile img';
+    t.dataset.id = w.id;
+    t.innerHTML = `<div class="imgbox">${imgInner(w)}</div>`;
+    t.addEventListener('click', () => pickImg(t, w));
+    colL.appendChild(t);
+  });
+
+  right.forEach(w => {
+    const t = document.createElement('div');
+    t.className = 'tile word';
+    t.dataset.id = w.id;
+    t.textContent = w.text;
+    t.addEventListener('click', () => pickWord(t, w));
+    colR.appendChild(t);
+  });
+
+  matchGrid.appendChild(colL);
+  matchGrid.appendChild(colR);
+  matchInfo.textContent = `Round ${matchRoundIdx + 1} / 2`;
+}
+
+function pickImg(tile, w) {
+  primeSpeech();
+  if (matchLock || tile.classList.contains('done')) return;
+  if (selImgTile) selImgTile.classList.remove('sel');
+  selImgTile = tile;
+  tile.classList.add('sel');
+  sayPlayer(w.text);
+  checkMatch();
+}
+
+function pickWord(tile, w) {
+  primeSpeech();
+  if (matchLock || tile.classList.contains('done')) return;
+  if (selWordTile) selWordTile.classList.remove('sel');
+  selWordTile = tile;
+  tile.classList.add('sel');
+  sayPlayer(w.text);
+  checkMatch();
+}
+
+function checkMatch() {
+  if (!selImgTile || !selWordTile) return;
+  matchLock = true;
+  const a = selImgTile.dataset.id;
+  const b = selWordTile.dataset.id;
+
+  if (a === b) {
+    const w = WORDS.find(x => x.id === a);
+    selImgTile.classList.add('done');
+    selWordTile.classList.add('done');
+    selImgTile.classList.remove('sel');
+    selWordTile.classList.remove('sel');
+    sayPlayer(w.text);
+    addScore(1);
+    matchSolved++;
+    selImgTile = null;
+    selWordTile = null;
+    matchLock = false;
+
+    if (matchSolved === 4) {
+      setTimeout(() => {
+        matchRoundIdx++;
+        if (matchRoundIdx < matchRounds.length) {
+          matchSolved = 0;
+          renderMatchRound();
+        } else {
+          matchInfo.textContent = '🎉 All done!';
+          setTimeout(startMatch, 1500);
+        }
+      }, 800);
+    }
+  } else {
+    const t1 = selImgTile, t2 = selWordTile;
+    t1.classList.add('wrong');
+    t2.classList.add('wrong');
+    setTimeout(() => {
+      t1.classList.remove('wrong', 'sel');
+      t2.classList.remove('wrong', 'sel');
+      selImgTile = null;
+      selWordTile = null;
+      matchLock = false;
+    }, 600);
+  }
+}
+
+$('#matchRestart').addEventListener('click', startMatch);
+startMatch();
+
+/* =========================================================
+   TAB 3 — SPELL  (build the word from letters)
+   ========================================================= */
+const spellImg      = $('#spellImg');
+const spellSlots    = $('#spellSlots');
+const spellLettersEl= $('#spellLetters');
+const spellFeedback = $('#spellFeedback');
+const spellSpeakBtn = $('#spellSpeak');
+
+let spellQueue = [], spellIdx = 0;
+let spellTarget = '';
+let spellChips  = [];
+let placedChips = [];
+let spellLocked = false;
+
+function startSpell() {
+  spellQueue = shuffle(WORDS.slice());
+  spellIdx = 0;
+  showSpell();
+}
+
+function showSpell() {
+  spellLocked = false;
+  const w = spellQueue[spellIdx];
+  spellImg.classList.remove('noimg');
+  spellImg.innerHTML = imgInner(w);
+
+  spellTarget = w.text.replace(/\s/g, '').toLowerCase();
+  spellChips  = shuffle(spellTarget.split('').map(c => ({ letter: c, used: false })));
+  placedChips = [];
+
+  spellFeedback.textContent = '';
+  spellFeedback.className = 'feedback';
+  spellSlots.classList.remove('wrong', 'ok');
+
+  renderSpellSlots(w.text);
+  renderSpellChips();
+
+  // auto-say the word when a new card appears
+  setTimeout(() => {
+    if (spellQueue[spellIdx] === w) sayPlayer(w.text);
+  }, 250);
+}
+
+function renderSpellSlots(word) {
+  spellSlots.innerHTML = '';
+  const words = word.split(' ');
+  let letterIdx = 0;
+  words.forEach(part => {
+    const wd = document.createElement('div');
+    wd.className = 'slotWord';
+    for (let i = 0; i < part.length; i++) {
+      const s = document.createElement('div');
+      s.className = 'slot';
+      const chipIdx = placedChips[letterIdx];
+      if (chipIdx !== undefined) {
+        s.textContent = spellChips[chipIdx].letter;
+        s.classList.add('filled');
+      }
+      wd.appendChild(s);
+      letterIdx++;
+    }
+    spellSlots.appendChild(wd);
+  });
+}
+
+function renderSpellChips() {
+  spellLettersEl.innerHTML = '';
+  spellChips.forEach((chip, i) => {
+    const b = document.createElement('button');
+    b.className = 'letterChip' + (chip.used ? ' used' : '');
+    b.textContent = chip.letter;
+    b.addEventListener('click', () => tapSpellChip(i));
+    spellLettersEl.appendChild(b);
+  });
+}
+
+function tapSpellChip(i) {
+  primeSpeech();
+  if (spellLocked) return;
+  if (spellChips[i].used) return;
+  if (placedChips.length >= spellTarget.length) return;
+
+  spellChips[i].used = true;
+  placedChips.push(i);
+  renderSpellChips();
+  renderSpellSlots(spellQueue[spellIdx].text);
+
+  if (placedChips.length === spellTarget.length) checkSpell();
+}
+
+function spellBackspace() {
+  if (spellLocked) return;
+  if (!placedChips.length) return;
+  const last = placedChips.pop();
+  spellChips[last].used = false;
+  renderSpellChips();
+  renderSpellSlots(spellQueue[spellIdx].text);
+  spellSlots.classList.remove('ok', 'wrong');
+  spellFeedback.textContent = '';
+  spellFeedback.className = 'feedback';
+}
+
+function checkSpell() {
+  const playerWord = placedChips.map(i => spellChips[i].letter).join('');
+  if (playerWord === spellTarget) {
+    spellLocked = true;
+    spellSlots.classList.add('ok');
+    const w = spellQueue[spellIdx];
+    spellFeedback.textContent = '✅ ' + w.text;
+    spellFeedback.className = 'feedback ok';
+    sayPlayer(w.text);
+    addScore(1);
+    setTimeout(() => {
+      spellIdx = (spellIdx + 1) % spellQueue.length;
+      showSpell();
+    }, 1600);
+  } else {
+    spellSlots.classList.add('wrong');
+    spellFeedback.textContent = '❌ Not quite. Try again!';
+    spellFeedback.className = 'feedback no';
+    setTimeout(() => {
+      spellSlots.classList.remove('wrong');
+      placedChips = [];
+      spellChips.forEach(c => c.used = false);
+      renderSpellChips();
+      renderSpellSlots(spellQueue[spellIdx].text);
+    }, 900);
+  }
+}
+
+$('#spellBack').addEventListener('click', spellBackspace);
+$('#spellSkip').addEventListener('click', () => {
+  primeSpeech();
+  spellIdx = (spellIdx + 1) % spellQueue.length;
+  showSpell();
+});
+
+/* 🔊 Replay button for Spell tab */
+spellSpeakBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  primeSpeech();
+  const w = spellQueue[spellIdx];
+  if (w) sayPlayer(w.text);
+});
+
+startSpell();
+
+/* =========================================================
+   TAB 4 — WRITE THE WORD
+   ========================================================= */
+const labelImg      = $('#labelImg');
+const labelInput    = $('#labelInput');
+const labelFeedback = $('#labelFeedback');
+const labelSpeakBtn = $('#labelSpeak');
+
+let labelQueue = [], labelIdx = 0, labelTries = 0;
+
+function startLabel() {
+  labelQueue = shuffle(WORDS.slice());
+  labelIdx = 0;
+  showLabel();
+}
+
+function showLabel() {
+  const w = labelQueue[labelIdx];
+  labelImg.classList.remove('noimg');
+  labelImg.innerHTML = imgInner(w);
+  labelInput.value = '';
+  labelFeedback.textContent = '';
+  labelFeedback.className = 'feedback';
+  labelTries = 0;
+  // auto-say once when the card appears
+  setTimeout(() => {
+    if (labelQueue[labelIdx] === w) sayPlayer(w.text);
+  }, 250);
+}
+
+function checkLabel() {
+  primeSpeech();
+  const w = labelQueue[labelIdx];
+  const val = labelInput.value.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!val) return;
+
+  if (val === w.text) {
+    labelFeedback.textContent = '✅ Great job! ' + w.text;
+    labelFeedback.className = 'feedback ok';
+    sayPlayer(w.text);
+    addScore(1);
+    labelTries = 0;
+    setTimeout(nextLabel, 1200);
+  } else {
+    labelTries++;
+    if (labelTries >= 2) {
+      labelFeedback.textContent = '💡 It is: ' + w.text;
+      labelFeedback.className = 'feedback no';
+      sayPlayer(w.text);
+      setTimeout(nextLabel, 1800);
+    } else {
+      labelFeedback.textContent = '❌ Try again!';
+      labelFeedback.className = 'feedback no';
+    }
+  }
+}
+
+function nextLabel() {
+  labelIdx = (labelIdx + 1) % labelQueue.length;
+  showLabel();
+}
+
+$('#labelCheck').addEventListener('click', checkLabel);
+$('#labelSkip').addEventListener('click', () => { primeSpeech(); nextLabel(); });
+labelInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); checkLabel(); }
+});
+
+/* 🔊 Replay button for Write tab */
+labelSpeakBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  primeSpeech();
+  const w = labelQueue[labelIdx];
+  if (w) sayPlayer(w.text);
+});
+
+startLabel();
+
+/* =========================================================
+   TAB 5 — DIALOGUE
+   ========================================================= */
+const HERO_ACTS = ['wake up','get up','have a shower','get dressed','have breakfast'];
+const TIMES     = [6, 7, 8, 9];
+
+let phase = 'answer';
+let answerAct, questionAct;
+let playerTime, heroTime;
+let answerTokens = [];
+let questionTokens = [];
+let built = [];
+let locked = false;
+let roundId = 0;
+
+const heroSaysText = $('#heroSaysText');
+const playerText   = $('#playerText');
+const playerBubble = $('#playerBubble');
+const timeHint     = $('#timeHint');
+const phaseLabel   = $('#phaseLabel');
+const wordPool     = $('#wordPool');
+const nextBtn      = $('#nextRoundBtn');
+
+function newRound() {
+  primeSpeech();
+  roundId++;
+  const myRound = roundId;
+
+  answerAct = rnd(HERO_ACTS);
+  const others = HERO_ACTS.filter(a => a !== answerAct);
+  questionAct = rnd(others);
+  playerTime = rnd(TIMES);
+  heroTime   = rnd(TIMES);
+
+  phase = 'answer';
+  heroSaysText.textContent = `What time do you ${answerAct}?`;
+  playerText.textContent   = 'Tap the words to answer 👇';
+  playerBubble.classList.remove('solved');
+  timeHint.textContent     = '⏰ ' + playerTime + ':00';
+  timeHint.classList.remove('hidden');
+  phaseLabel.textContent   = '👉 Your answer';
+
+  answerTokens = ['I', answerAct, 'at', String(playerTime), "o'clock"];
+  built  = [];
+  locked = false;
+  nextBtn.disabled = true;
+
+  buildWordPool(answerTokens);
+
+  const qText = heroSaysText.textContent;
+  setTimeout(() => {
+    if (roundId === myRound) sayHero(qText);
+  }, 350);
+}
+
+function buildWordPool(tokens) {
+  wordPool.innerHTML = '';
+  shuffle(tokens.slice()).forEach(tok => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = tok;
+    b.addEventListener('click', () => tapChip(b, tok));
+    wordPool.appendChild(b);
+  });
+}
+
+function tapChip(btn, tok) {
+  primeSpeech();
+  if (locked) return;
+  const tokens = (phase === 'answer') ? answerTokens : questionTokens;
+  const expected = tokens[built.length];
+
+  if (tok === expected) {
+    built.push(tok);
+    btn.remove();
+    updatePreview(tokens);
+    if (built.length === tokens.length) onPhaseComplete();
+  } else {
+    btn.classList.add('shake');
+    setTimeout(() => btn.classList.remove('shake'), 400);
+  }
+}
+
+function updatePreview(tokens) {
+  const text = built.join(' ');
+  if (built.length === tokens.length) {
+    playerText.textContent = (phase === 'question') ? text + '?' : text + '.';
+  } else {
+    playerText.textContent = text + ' …';
+  }
+}
+
+function onPhaseComplete() {
+  locked = true;
+  playerBubble.classList.add('solved');
+  addScore(1);
+
+  const myRound = roundId;
+
+  if (phase === 'answer') {
+    const sentence = `I ${answerAct} at ${playerTime} o'clock.`;
+    playerText.textContent = sentence;
+    sayPlayer(sentence);
+
+    setTimeout(() => {
+      if (roundId === myRound) startQuestionPhase();
+    }, 2400);
+
+  } else {
+    const question = `What time do you ${questionAct}?`;
+    playerText.textContent = question;
+    sayPlayer(question);
+
+    setTimeout(() => {
+      if (roundId !== myRound) return;
+      const heroReply = `I ${questionAct} at ${heroTime} o'clock.`;
+      heroSaysText.textContent = heroReply;
+      sayHero(heroReply);
+      nextBtn.disabled = false;
+    }, 2200);
+  }
+}
+
+function startQuestionPhase() {
+  phase = 'question';
+  playerText.textContent = 'Now ask the hero 👇';
+  playerBubble.classList.remove('solved');
+  timeHint.classList.add('hidden');
+  phaseLabel.textContent = '🗣️ Your question';
+
+  questionTokens = ['What', 'time', 'do', 'you', questionAct];
+  built  = [];
+  locked = false;
+
+  buildWordPool(questionTokens);
+}
+
+$('#speakHero').addEventListener('click', e => {
+  e.stopPropagation();
+  primeSpeech();
+  const t = (heroSaysText.textContent || '').trim();
+  if (t && t !== '…') sayHero(t);
+});
+$('#speakPlayer').addEventListener('click', e => {
+  e.stopPropagation();
+  primeSpeech();
+  let t = (playerText.textContent || '').trim();
+  t = t.replace(/[👉👆⏰🗣️…🔊]/g, '').trim();
+  if (!t || t === 'Tap the words to answer' || t === 'Now ask the hero') return;
+  sayPlayer(t);
+});
+
+nextBtn.addEventListener('click', () => {
+  primeSpeech();
+  newRound();
+});
+
+newRound();
+</script>
+</body>
+</html>
